@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-/* Mise en page : instrument de terrain. Vue caméra en haut, carte polaire du ciel, résultat, puis réglages et emplacements. */
+/* Mise en page : instrument de terrain. Vue caméra, carte polaire du ciel, résultat, repères photo, emplacements, réglages. */
 :root{
   --bg:#eef2f1; --panel:#ffffff; --fg:#14211f; --muted:#566764; --line:#cfd9d7;
   --accent:#0f6e7a; --accent-fg:#ffffff;
@@ -22,6 +22,7 @@
     --accent:#4fc3cf;--accent-fg:#06201f;--sky:#4aa8f0;--obs:#f0654a;--warn:#e6a92a;--unk:#2c3b38;color-scheme:dark}
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0}
 body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--font);
   padding-top:env(safe-area-inset-top,0px);padding-bottom:max(16px,env(safe-area-inset-bottom,0px));
@@ -32,33 +33,40 @@ h1{font-size:1.35rem;margin:0;letter-spacing:.01em;text-wrap:balance}
 h2{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 8px;font-weight:600}
 p{margin:0}
 .sub{color:var(--muted);font-size:.92rem}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
 ol{margin:0;padding-left:1.2em;display:grid;gap:6px}
 button,select,input{font:inherit;color:inherit}
 .btn{appearance:none;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px 12px;
   font-weight:600;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-.btn:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn:focus-visible,select:focus-visible,input:focus-visible,.linkbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn:disabled{opacity:.45;cursor:default}
 .btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 .btn.obs{border-color:var(--obs);color:var(--obs)}
 .btn.sky{border-color:var(--sky);color:var(--sky)}
 .btn.active.obs{background:var(--obs);color:#fff}
 .btn.active.sky{background:var(--sky);color:#fff}
+.btn.armed{background:var(--obs);border-color:var(--obs);color:#fff}
 .row{display:flex;flex-wrap:wrap;gap:8px}
 .row>.btn{flex:1 1 140px}
 .cam{position:relative;width:100%;aspect-ratio:3/4;max-height:58vh;background:#000;border-radius:12px;overflow:hidden;margin:0 auto}
 .cam video,.cam canvas{position:absolute;inset:0;width:100%;height:100%}
 .cam video{object-fit:cover}
+.cam::before{content:"";position:absolute;inset:0;border:7px solid var(--obs);border-radius:12px;opacity:0;z-index:3;pointer-events:none;transition:opacity .12s}
+.cam.alert::before{opacity:1}
+.cam::after{content:"";position:absolute;inset:0;background:#fff;opacity:0;z-index:4;pointer-events:none;transition:opacity .25s}
+.cam.flash::after{opacity:.8;transition:none}
 .reticle{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border:2px solid #fff;border-radius:50%;
-  box-shadow:0 0 0 1px rgba(0,0,0,.5);pointer-events:none}
+  box-shadow:0 0 0 1px rgba(0,0,0,.5);pointer-events:none;z-index:2}
 .reticle::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;background:#fff;border-radius:50%}
-.hud{position:absolute;left:8px;right:8px;top:8px;display:flex;justify-content:space-between;gap:8px;pointer-events:none;
+.hud{position:absolute;left:8px;right:8px;top:8px;display:flex;justify-content:space-between;gap:8px;pointer-events:none;z-index:2;
   font:600 .8rem/1.3 var(--mono);color:#fff;text-shadow:0 1px 2px #000}
 .hud span{background:rgba(0,0,0,.45);padding:3px 7px;border-radius:6px}
-.camnote{position:absolute;left:8px;right:8px;bottom:8px;font-size:.85rem;color:#fff;background:rgba(0,0,0,.55);padding:6px 8px;border-radius:8px}
+.camnote{position:absolute;left:8px;right:8px;bottom:8px;font-size:.85rem;color:#fff;background:rgba(0,0,0,.55);padding:6px 8px;border-radius:8px;z-index:2}
 .mapwrap{display:grid;justify-items:center;gap:6px}
-#map{width:min(100%,340px);aspect-ratio:1;max-width:100%}
+#map{width:min(100%,340px);aspect-ratio:1;max-width:100%;cursor:pointer;touch-action:manipulation}
 .legend{display:flex;flex-wrap:wrap;gap:10px 16px;font-size:.82rem;color:var(--muted);justify-content:center}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.legend .pin{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--fg);color:var(--panel);font:600 .65rem/1 var(--mono);margin-right:5px;vertical-align:-3px}
 .result{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .figure{display:grid;gap:2px}
 .figure b{font:600 1.7rem/1.1 var(--mono);font-variant-numeric:tabular-nums}
@@ -69,18 +77,37 @@ button,select,input{font:inherit;color:inherit}
 .verdict.bad{border-color:var(--obs);color:var(--obs)}
 .status{font-size:.85rem;color:var(--muted)}
 .err{border:1px solid var(--obs);color:var(--obs);border-radius:10px;padding:10px 12px}
+.info{border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:8px 12px;font-size:.88rem}
 label{display:grid;gap:4px;font-size:.88rem}
+label.check{display:flex;gap:8px;align-items:center}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
 select,input[type=number],input[type=text]{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
-input[type=range]{width:100%;accent-color:var(--accent)}
+input[type=range],input[type=checkbox]{accent-color:var(--accent)}
+input[type=range]{width:100%}
 .hint{font-size:.8rem;color:var(--muted)}
 table{width:100%;border-collapse:collapse;font-size:.88rem}
 th,td{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:middle}
-td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
 td img{width:56px;height:56px;display:block;border-radius:6px}
-.linkbtn{background:none;border:0;color:var(--obs);cursor:pointer;padding:4px;font-size:.85rem}
+.actions{display:grid;gap:2px;justify-items:end}
+.linkbtn{background:none;border:0;color:var(--accent);cursor:pointer;padding:4px;font-size:.85rem;font-weight:600}
+.linkbtn.del{color:var(--obs)}
+.tags{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.tag{display:grid;grid-template-columns:auto 64px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 8px;cursor:pointer;min-width:0}
+.tag .pin{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--fg);color:var(--panel);font:600 .8rem/1 var(--mono)}
+.tag img{width:64px;height:48px;object-fit:cover;border-radius:6px;background:var(--unk)}
+.tag .txt{min-width:0}
+.tag .txt b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag .txt span{font:.78rem/1.3 var(--mono);color:var(--muted)}
+.chip{font-size:.72rem;font-weight:600;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.chip.obs{border-color:var(--obs);color:var(--obs)}
+.chip.sky{border-color:var(--sky);color:var(--sky)}
 details summary{cursor:pointer;font-weight:600}
 details[open] summary{margin-bottom:10px}
+.viewer{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.65);display:grid;place-items:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.vbox{background:var(--panel);border-radius:12px;padding:12px;width:100%;max-width:520px;max-height:100%;overflow:auto;display:grid;gap:10px}
+.vbox img{width:100%;border-radius:8px;display:block;background:var(--unk);min-height:120px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -96,14 +123,16 @@ details[open] summary{margin-bottom:10px}
     <ol>
       <li>Placez le téléphone à l'endroit et à la hauteur exacts prévus pour l'antenne.</li>
       <li>Appuyez sur <b>Démarrer</b>, tenez le téléphone en portrait et balayez lentement le ciel : un tour complet à environ 40° de hauteur, un autre vers 65°, puis le zénith.</li>
-      <li>Remplissez tout le cercle pointillé de la carte : c'est le champ de vision de l'antenne.</li>
+      <li>Remplissez tout le cercle pointillé de la carte : c'est le champ de vision de l'antenne. Un bip et un cadre rouge signalent que vous visez un obstacle dans ce champ.</li>
       <li>Si la détection se trompe (mur clair, nuage très sombre), visez la zone et maintenez <b>Obstacle</b> ou <b>Ciel</b>.</li>
-      <li>Enregistrez le résultat, puis recommencez ailleurs pour comparer.</li>
+      <li>Visez un obstacle et appuyez sur <b>Photo + repère</b> pour le noter sur la carte avec sa photo.</li>
+      <li>Enregistrez l'emplacement, puis recommencez ailleurs pour comparer.</li>
     </ol>
-    <p class="hint" style="margin-top:10px">Sur iPhone, tenez d'abord le téléphone à plat deux secondes : la boussole se cale. Fonctionne de jour uniquement.</p>
+    <p class="hint" style="margin-top:10px">Le scan en cours est sauvegardé en continu sur ce téléphone. Sur iPhone, tenez d'abord le téléphone à plat deux secondes : la boussole se cale. Fonctionne de jour uniquement.</p>
   </section>
 
   <div id="error" class="err" hidden></div>
+  <div id="info" class="info" hidden></div>
 
   <div class="row">
     <button class="btn primary" id="startBtn" type="button">Démarrer</button>
@@ -121,16 +150,18 @@ details[open] summary{margin-bottom:10px}
     <div class="row" style="margin-top:10px">
       <button class="btn obs" id="markObs" type="button">Maintenir : obstacle</button>
       <button class="btn sky" id="markSky" type="button">Maintenir : ciel</button>
+      <button class="btn primary" id="shotBtn" type="button" style="flex-basis:100%">Photo + repère</button>
     </div>
   </section>
 
   <section class="panel mapwrap">
     <h2 style="justify-self:start">Carte du ciel</h2>
-    <canvas id="map" width="680" height="680" aria-label="Carte polaire des obstructions"></canvas>
+    <canvas id="map" width="680" height="680" aria-label="Carte polaire des obstructions. Touchez un repère numéroté pour voir sa photo."></canvas>
     <div class="legend">
       <span><i style="background:var(--sky)"></i>Ciel dégagé</span>
       <span><i style="background:var(--obs)"></i>Obstacle</span>
       <span><i style="background:var(--unk)"></i>Non scanné</span>
+      <span><span class="pin">1</span>Repère photo</span>
       <span>Pointillé : champ de l'antenne</span>
     </div>
     <p class="status" id="northStatus">Nord : en attente des capteurs</p>
@@ -151,6 +182,12 @@ details[open] summary{margin-bottom:10px}
   </section>
 
   <section class="panel">
+    <h2>Repères photo</h2>
+    <ul class="tags" id="tagList"></ul>
+    <p class="hint" id="tagEmpty">Aucun repère. Pendant le scan, visez un obstacle et appuyez sur « Photo + repère ».</p>
+  </section>
+
+  <section class="panel">
     <h2>Emplacements testés</h2>
     <div class="row">
       <input type="text" id="posName" placeholder="Ex. faîtage côté nord, mât 3 m" style="flex:1 1 200px">
@@ -159,9 +196,10 @@ details[open] summary{margin-bottom:10px}
     <div style="overflow-x:auto;margin-top:10px">
       <table>
         <thead><tr><th>Carte</th><th>Emplacement</th><th class="num">Obstr.</th><th class="num">Scanné</th><th></th></tr></thead>
-        <tbody id="posList"><tr><td colspan="5" class="hint">Aucun emplacement enregistré. Les résultats restent sur ce téléphone.</td></tr></tbody>
+        <tbody id="posList"></tbody>
       </table>
     </div>
+    <p class="hint" style="margin-top:8px">« Ouvrir » recharge la carte, les obstacles et les repères d'un emplacement, pour le consulter ou compléter le scan.</p>
   </section>
 
   <section class="panel">
@@ -187,12 +225,26 @@ details[open] summary{margin-bottom:10px}
         <label>Sensibilité ciel : <span id="sensVal">50</span>
           <input type="range" id="sens" min="0" max="100" step="1" value="50">
         </label>
+        <label class="check"><input type="checkbox" id="alertOn" checked> Bip (et vibration sur Android) sur un obstacle du champ</label>
       </div>
       <p class="hint" style="margin-top:10px">Inclinaison 0° : cône centré sur le zénith, sans dépendance au nord (choix prudent). Champ caméra : environ 65° pour l'objectif principal d'un smartphone en vidéo ; les points de détection sur l'image doivent coller aux obstacles quand vous tournez.</p>
+      <p class="hint" style="margin-top:6px">Sur iPhone, Safari ne laisse pas une page faire vibrer le téléphone : l'alerte est un bip et un cadre rouge. Le bip coupe la musique en cours.</p>
       <p class="hint" style="margin-top:6px">Outil d'estimation : la détection se fait par la couleur du ciel. La carte d'obstructions de l'appli Starlink, établie par l'antenne après installation, reste la référence.</p>
     </details>
   </section>
 </main>
+
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="Repère photo">
+  <div class="vbox">
+    <img id="vImg" alt="">
+    <label>Nom du repère <input type="text" id="vLabel"></label>
+    <p class="hint" id="vMeta"></p>
+    <div class="row">
+      <button class="btn" id="vClose" type="button">Fermer</button>
+      <button class="btn obs" id="vDel" type="button">Supprimer le repère</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -202,11 +254,12 @@ const D2R=Math.PI/180, R2D=180/Math.PI;
 const STEP=3, NEL=Math.round(90/STEP), NAZ=Math.round(360/STEP), N=NEL*NAZ;
 const skyV=new Float32Array(N), obsV=new Float32Array(N), forced=new Int8Array(N);
 const inFov=new Uint8Array(N), wts=new Float32Array(N);
-const S={fov:110,tilt:0,tiltAz:0,camFov:65,sens:50};
-const STORE="visee-starlink-v1";
+const S={fov:110,tilt:0,tiltAz:0,camFov:65,sens:50,alert:true};
+const STORE="visee-starlink-v1", CUR="visee-starlink-cur";
 
 let ori=null, yawOffset=0, northMode="inconnu", useAbsolute=false;
 let running=false, camOK=false, holdMode=null, timer=null, cur=null, prevC=null, tick=0, dark=false;
+let tags=[], dirty=false, wasRed=false, lastBeep=0, viewing=null;
 const video=$("#video"), overlay=$("#overlay"), octx=overlay.getContext("2d");
 const work=document.createElement("canvas"), wctx=work.getContext("2d",{willReadFrequently:true});
 const map=$("#map"), mctx=map.getContext("2d");
@@ -252,6 +305,15 @@ function state(k){ // 0 inconnu, 1 ciel, 2 obstacle
   const t=skyV[k]+obsV[k]; if(t<2) return 0;
   return obsV[k]/t>=0.35?2:1;
 }
+function encodeGrid(){
+  let s=""; for(let k=0;k<N;k++){ const f=forced[k]; s+= f>0?"O":f<0?"S":String(state(k)); } return s;
+}
+function decodeGrid(s){
+  skyV.fill(0); obsV.fill(0); forced.fill(0);
+  if(typeof s!=="string"||s.length!==N) return;
+  for(let k=0;k<N;k++){ const ch=s[k];
+    if(ch==="O") forced[k]=1; else if(ch==="S") forced[k]=-1; else if(ch==="1") skyV[k]=3; else if(ch==="2") obsV[k]=3; }
+}
 
 /* ---------- capteurs ---------- */
 function onAbs(e){
@@ -269,6 +331,30 @@ function onRel(e){
     yawOffset = northMode==="auto" ? circMix(yawOffset,target,0.2) : target;
     northMode="auto";
   }
+}
+
+/* ---------- alerte : bip, vibration (Android), cadre rouge ---------- */
+let actx=null;
+function unlockAudio(){
+  try{ if(navigator.audioSession) navigator.audioSession.type="playback"; }catch(e){}
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state!=="running") actx.resume();
+    const o=actx.createOscillator(), g=actx.createGain(); g.gain.value=0; o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime+0.02);
+  }catch(e){ actx=null; }
+}
+function beep(){
+  if(!actx) return;
+  try{
+    const t=actx.currentTime, o=actx.createOscillator(), g=actx.createGain();
+    o.frequency.value=880; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.3,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+0.12);
+    o.connect(g).connect(actx.destination); o.start(t); o.stop(t+0.14);
+  }catch(e){}
+}
+function alertFeedback(){
+  if(!S.alert) return;
+  try{ if(navigator.vibrate) navigator.vibrate(70); }catch(e){}
+  beep();
 }
 
 /* ---------- classification ciel / obstacle ---------- */
@@ -304,6 +390,7 @@ function sampleFrame(R){
   dark = lumSum/cnt<35;
   if(dark) return;
   for(const [ae,sky] of votes){ const k=cellIdx(ae.az,ae.el); if(k<0) continue; if(sky) skyV[k]+=1; else obsV[k]+=1; }
+  dirty=true;
 }
 function markAround(R,mode){
   const val=mode==="obs"?1:-1;
@@ -311,12 +398,13 @@ function markAround(R,mode){
     const ae=azEl(R,Math.tan(du*D2R),Math.tan(dv*D2R),-1);
     const k=cellIdx(ae.az,ae.el); if(k>=0) forced[k]=val;
   }
+  dirty=true;
 }
 
 /* ---------- boucle ---------- */
 function step(){
   tick++;
-  if(!ori){ return; }
+  if(!ori) return;
   const R=rotMatrix(ori.a+yawOffset,ori.b,ori.g);
   const c=azEl(R,0,0,-1); cur=c;
   const moved=prevC?angDist(prevC,c):0; prevC=c;
@@ -333,6 +421,13 @@ function step(){
   }
   if(isLandscape()) note="Tenez le téléphone en portrait.";
   const cn=$("#camnote"); cn.hidden=!note; cn.textContent=note;
+  // alerte quand la visée est sur un obstacle du champ de l'antenne
+  const k=cellIdx(c.az,c.el);
+  const red = running && !holdMode && k>=0 && inFov[k]===1 && state(k)===2;
+  $("#cam").classList.toggle("alert",red);
+  const now=performance.now();
+  if(red && (!wasRed || now-lastBeep>1200)){ alertFeedback(); lastBeep=now; }
+  wasRed=red;
   updateStats();
   if(tick%2===0) drawMap();
   updateNorth();
@@ -350,13 +445,14 @@ function updateNorth(){
 
 /* ---------- résultat ---------- */
 let lastStats={pct:null,cov:0};
+function fmtPct(p){ return p==null?"—":(p*100).toFixed(p<0.1?1:0)+" %"; }
 function updateStats(){
   let tot=0,scan=0,ob=0;
   for(let k=0;k<N;k++){ if(!inFov[k]) continue; const w=wts[k]; tot+=w; const s=state(k); if(s){scan+=w; if(s===2) ob+=w;} }
   const cov=tot?scan/tot:0, pct=scan?ob/scan:null;
   lastStats={pct,cov};
   $("#pctCov").textContent=Math.round(cov*100)+" %";
-  $("#pctObs").textContent=pct==null?"—":(pct*100).toFixed(pct<0.1?1:0)+" %";
+  $("#pctObs").textContent=fmtPct(pct);
   const v=$("#verdict"); v.className="verdict";
   if(cov===0){ v.textContent="Scan non commencé"; }
   else if(cov<0.85){ v.textContent="Scan incomplet : continuez à balayer le cercle pointillé."; }
@@ -366,15 +462,17 @@ function updateStats(){
 }
 
 /* ---------- carte polaire ---------- */
-let col={};
+let col={}, geom={c:0,R:0,dpr:1};
 function readColors(){
   const cs=getComputedStyle(document.documentElement);
   for(const n of ["panel","fg","muted","line","sky","obs","unk","accent"]) col[n]=cs.getPropertyValue("--"+n).trim();
 }
+function polar(az,el){ const r=(90-Math.max(0,el))/90*geom.R, a=(az-90)*D2R; return [geom.c+r*Math.cos(a), geom.c+r*Math.sin(a)]; }
 function drawMap(){
   const dpr=window.devicePixelRatio||1, css=map.clientWidth||340, Sz=Math.round(css*dpr);
   if(map.width!==Sz){ map.width=Sz; map.height=Sz; }
-  const c=Sz/2, Rr=Sz/2-28*dpr, ctx=mctx;
+  const c=Sz/2, Rr=Sz/2-28*dpr, ctx=mctx; geom={c,R:Rr,dpr};
+  const ff=getComputedStyle(document.body).fontFamily;
   ctx.clearRect(0,0,Sz,Sz);
   ctx.fillStyle=col.unk; ctx.globalAlpha=.35; ctx.beginPath(); ctx.arc(c,c,Rr,0,6.2832); ctx.fill(); ctx.globalAlpha=1;
   for(let i=0;i<NEL;i++){
@@ -382,40 +480,165 @@ function drawMap(){
     for(let j=0;j<NAZ;j++){
       const k=i*NAZ+j, s=state(k), f=inFov[k];
       if(!s && !f) continue;
+      const alpha= f ? (s?0.95:0.7) : 0.3;
       ctx.fillStyle= s===2?col.obs : s===1?col.sky : col.unk;
-      ctx.globalAlpha= f ? (s?0.95:0.7) : (s?0.3:0);
-      if(ctx.globalAlpha===0) continue;
+      ctx.globalAlpha=alpha;
       const a0=(j*STEP-90)*D2R, a1=((j+1)*STEP-90)*D2R+0.002;
       ctx.beginPath(); ctx.arc(c,c,r1,a0,a1); ctx.arc(c,c,Math.max(0,r2),a1,a0,true); ctx.closePath(); ctx.fill();
     }
   }
   ctx.globalAlpha=1;
-  // repères
   ctx.strokeStyle=col.line; ctx.lineWidth=1*dpr; ctx.fillStyle=col.muted;
-  ctx.font=(11*dpr)+"px "+getComputedStyle(document.body).fontFamily;
-  ctx.textAlign="left"; ctx.textBaseline="middle";
-  for(const el of [0,30,60]){ const r=(90-el)/90*Rr; ctx.beginPath(); ctx.arc(c,c,r,0,6.2832); ctx.stroke();
-    ctx.fillText(el+"°",c+3*dpr,c-r+8*dpr); }
+  ctx.font=(11*dpr)+"px "+ff; ctx.textAlign="left"; ctx.textBaseline="middle";
+  for(const el of [0,30,60]){ const r=(90-el)/90*Rr; ctx.beginPath(); ctx.arc(c,c,r,0,6.2832); ctx.stroke(); ctx.fillText(el+"°",c+3*dpr,c-r+8*dpr); }
   ctx.beginPath(); ctx.moveTo(c-Rr,c); ctx.lineTo(c+Rr,c); ctx.moveTo(c,c-Rr); ctx.lineTo(c,c+Rr); ctx.stroke();
-  ctx.fillStyle=col.fg; ctx.font="600 "+(13*dpr)+"px "+getComputedStyle(document.body).fontFamily; ctx.textAlign="center";
-  const lab=[["N",0],["E",90],["S",180],["O",270]];
-  for(const [t,az] of lab){ const a=(az-90)*D2R, r=Rr+15*dpr; ctx.fillText(t,c+r*Math.cos(a),c+r*Math.sin(a)); }
+  ctx.fillStyle=col.fg; ctx.font="600 "+(13*dpr)+"px "+ff; ctx.textAlign="center";
+  for(const [t,az] of [["N",0],["E",90],["S",180],["O",270]]){ const a=(az-90)*D2R, r=Rr+15*dpr; ctx.fillText(t,c+r*Math.cos(a),c+r*Math.sin(a)); }
   // contour du champ de l'antenne
   const ax=fovAxis(), ch=Math.cos(S.fov/2*D2R), pts=[];
   for(let az=0;az<=360;az+=2){ let found=null; for(let el=0;el<=90;el+=0.5){ if(inCone(az,el,ax,ch)){found=el;break;} } if(found!=null) pts.push([az,found]); }
   ctx.setLineDash([6*dpr,5*dpr]); ctx.strokeStyle=col.fg; ctx.lineWidth=2*dpr; ctx.beginPath();
-  pts.forEach(([az,el],n)=>{ const r=(90-el)/90*Rr, a=(az-90)*D2R, x=c+r*Math.cos(a), y=c+r*Math.sin(a); n?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  pts.forEach(([az,el],n)=>{ const [x,y]=polar(az,el); n?ctx.lineTo(x,y):ctx.moveTo(x,y); });
   ctx.stroke(); ctx.setLineDash([]);
+  // repères photo
+  ctx.font="600 "+(11*dpr)+"px "+getComputedStyle(document.documentElement).getPropertyValue("--mono");
+  for(const tg of tags){ const [x,y]=polar(tg.az,tg.el);
+    ctx.fillStyle=col.fg; ctx.strokeStyle=col.panel; ctx.lineWidth=2*dpr;
+    ctx.beginPath(); ctx.arc(x,y,10*dpr,0,6.2832); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=col.panel; ctx.fillText(String(tg.n),x,y+0.5*dpr); }
   // visée courante
-  if(cur && cur.el>=0){ const r=(90-cur.el)/90*Rr, a=(cur.az-90)*D2R;
+  if(cur && cur.el>=0 && running){ const [x,y]=polar(cur.az,cur.el);
     ctx.fillStyle=col.accent; ctx.strokeStyle=col.panel; ctx.lineWidth=2*dpr;
-    ctx.beginPath(); ctx.arc(c+r*Math.cos(a),c+r*Math.sin(a),6*dpr,0,6.2832); ctx.fill(); ctx.stroke(); }
+    ctx.beginPath(); ctx.arc(x,y,6*dpr,0,6.2832); ctx.fill(); ctx.stroke(); }
+}
+map.addEventListener("click",e=>{
+  const r=map.getBoundingClientRect(), sx=map.width/r.width, x=(e.clientX-r.left)*sx, y=(e.clientY-r.top)*sx;
+  let best=null, bd=24*geom.dpr;
+  for(const tg of tags){ const [px,py]=polar(tg.az,tg.el), d=Math.hypot(px-x,py-y); if(d<bd){bd=d;best=tg;} }
+  if(best) openViewer(best);
+});
+
+/* ---------- photos (IndexedDB, repli en mémoire) ---------- */
+const mem=new Map(), urls=new Map();
+let dbp=null;
+function db(){
+  if(!dbp) dbp=new Promise((res,rej)=>{ try{ const r=indexedDB.open("visee-starlink",1);
+    r.onupgradeneeded=()=>r.result.createObjectStore("photos"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);}catch(e){rej(e)} });
+  return dbp;
+}
+async function photoPut(id,blob){
+  mem.set(id,blob);
+  try{ const d=await db(); await new Promise((res,rej)=>{ const tx=d.transaction("photos","readwrite"); tx.objectStore("photos").put(blob,id); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); return true; }
+  catch(e){ return false; }
+}
+async function photoGet(id){
+  if(mem.has(id)) return mem.get(id);
+  try{ const d=await db(); return await new Promise((res,rej)=>{ const q=d.transaction("photos").objectStore("photos").get(id); q.onsuccess=()=>res(q.result||null); q.onerror=()=>rej(q.error); }); }
+  catch(e){ return null; }
+}
+async function photoDel(id){
+  mem.delete(id); if(urls.has(id)){ URL.revokeObjectURL(urls.get(id)); urls.delete(id); }
+  try{ const d=await db(); d.transaction("photos","readwrite").objectStore("photos").delete(id); }catch(e){}
+}
+async function photoUrl(id){
+  if(urls.has(id)) return urls.get(id);
+  const b=await photoGet(id); if(!b) return "";
+  const u=URL.createObjectURL(b); urls.set(id,u); return u;
+}
+function photoUsed(id,exceptSavedIndex){
+  if(tags.some(t=>t.id===id)) return true;
+  return loadPos().some((p,i)=>i!==exceptSavedIndex && (p.tags||[]).some(t=>t.id===id));
+}
+
+async function takePhoto(){
+  if(!camOK||!cur||video.readyState<2){ showErr("Photo impossible : démarrez le scan avec la caméra active."); return; }
+  const vw=video.videoWidth, vh=video.videoHeight, sc=Math.min(1,960/Math.max(vw,vh));
+  const cv=document.createElement("canvas"); cv.width=Math.round(vw*sc); cv.height=Math.round(vh*sc);
+  cv.getContext("2d").drawImage(video,0,0,cv.width,cv.height);
+  const camEl=$("#cam"); camEl.classList.add("flash"); setTimeout(()=>camEl.classList.remove("flash"),60);
+  const blob=await new Promise(res=>cv.toBlob(res,"image/jpeg",0.75));
+  if(!blob){ showErr("La photo n'a pas pu être créée."); return; }
+  const id="p"+Date.now()+Math.random().toString(36).slice(2,6);
+  const stored=await photoPut(id,blob);
+  const n=tags.reduce((m,t)=>Math.max(m,t.n),0)+1;
+  const k=cellIdx(cur.az,cur.el);
+  tags.push({id,n,az:Math.round(cur.az*10)/10,el:Math.round(cur.el*10)/10,label:"Repère "+n,t:Date.now(),
+    inFov:k>=0&&inFov[k]===1, st:k>=0?state(k):0});
+  dirty=true; renderTags(); drawMap();
+  if(!stored) showInfo("Photo gardée pour cette session seulement : le stockage du navigateur est indisponible.");
+}
+
+/* ---------- repères : liste et visionneuse ---------- */
+function tagMeta(t){
+  return "Az "+Math.round(t.az)+"° · Él "+Math.round(t.el)+"°";
+}
+function tagChip(t){
+  const ch=document.createElement("span"); ch.className="chip";
+  const k=cellIdx(t.az,t.el), inF=k>=0&&inFov[k]===1, st=k>=0?state(k):0;
+  if(!inF){ ch.textContent="hors champ"; }
+  else if(st===2){ ch.textContent="obstacle"; ch.classList.add("obs"); }
+  else if(st===1){ ch.textContent="ciel"; ch.classList.add("sky"); }
+  else ch.textContent="non scanné";
+  return ch;
+}
+async function renderTags(){
+  const ul=$("#tagList"); ul.textContent="";
+  $("#tagEmpty").hidden=tags.length>0;
+  const sorted=[...tags].sort((a,b)=>a.n-b.n);
+  for(const t of sorted){
+    const li=document.createElement("li"); li.className="tag"; li.tabIndex=0;
+    const pin=document.createElement("span"); pin.className="pin"; pin.textContent=t.n;
+    const im=document.createElement("img"); im.alt="";
+    const tx=document.createElement("div"); tx.className="txt";
+    const b=document.createElement("b"); b.textContent=t.label;
+    const sp=document.createElement("span"); sp.textContent=tagMeta(t);
+    tx.append(b,sp);
+    li.append(pin,im,tx,tagChip(t));
+    li.addEventListener("click",()=>openViewer(t));
+    li.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openViewer(t); } });
+    ul.appendChild(li);
+    photoUrl(t.id).then(u=>{ if(u) im.src=u; });
+  }
+}
+async function openViewer(t){
+  viewing=t;
+  $("#vLabel").value=t.label;
+  $("#vMeta").textContent="Repère "+t.n+" · "+tagMeta(t)+" · pris le "+new Date(t.t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"});
+  const img=$("#vImg"); img.removeAttribute("src"); img.alt="Photo du repère "+t.n;
+  $("#vDel").textContent="Supprimer le repère"; $("#vDel").classList.remove("armed");
+  $("#viewer").hidden=false;
+  const u=await photoUrl(t.id); if(u) img.src=u; else img.alt="Photo indisponible sur ce téléphone";
+}
+function closeViewer(){
+  if(viewing){ const v=$("#vLabel").value.trim(); if(v && v!==viewing.label){ viewing.label=v; dirty=true; renderTags(); } }
+  viewing=null; $("#viewer").hidden=true;
+}
+$("#vClose").addEventListener("click",closeViewer);
+$("#viewer").addEventListener("click",e=>{ if(e.target.id==="viewer") closeViewer(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && !$("#viewer").hidden) closeViewer(); });
+armButton($("#vDel"),"Confirmer la suppression",()=>{
+  if(!viewing) return;
+  const t=viewing; tags=tags.filter(x=>x!==t); viewing=null; $("#viewer").hidden=true;
+  if(!photoUsed(t.id,-1)) photoDel(t.id);
+  dirty=true; renderTags(); drawMap();
+});
+
+/* bouton à confirmation en deux appuis (les boîtes de dialogue du navigateur ne servent pas ici) */
+function armButton(btn,armedText,action){
+  let armed=false, timer=null; const orig=()=>btn.dataset.orig||btn.textContent;
+  btn.addEventListener("click",()=>{
+    if(!armed){ btn.dataset.orig=btn.textContent; btn.textContent=armedText; btn.classList.add("armed"); armed=true;
+      timer=setTimeout(()=>{ armed=false; btn.textContent=orig(); btn.classList.remove("armed"); },3000); return; }
+    clearTimeout(timer); armed=false; btn.textContent=orig(); btn.classList.remove("armed"); action();
+  });
 }
 
 /* ---------- démarrage ---------- */
 function showErr(t){ const e=$("#error"); e.textContent=t; e.hidden=false; }
+function showInfo(t){ const e=$("#info"); e.textContent=t; e.hidden=!t; }
 let wake=null;
 async function start(){
+  unlockAudio();
   $("#error").hidden=true;
   if(!window.isSecureContext){ showErr("Cette page doit être ouverte en HTTPS pour accéder à la caméra et aux capteurs."); return; }
   try{
@@ -430,6 +653,7 @@ async function start(){
     const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},audio:false});
     video.srcObject=st; await video.play(); camOK=true;
   }catch(e){ camOK=false; }
+  $("#shotBtn").disabled=!camOK;
   const sizeWork=()=>{ const vw=video.videoWidth||3, vh=video.videoHeight||4; work.width=96; work.height=Math.max(32,Math.round(96*vh/vw)); };
   video.addEventListener("loadedmetadata",sizeWork); sizeWork();
   const fitOverlay=()=>{ const r=$("#cam").getBoundingClientRect(), dpr=window.devicePixelRatio||1; overlay.width=Math.round(r.width*dpr); overlay.height=Math.round(r.height*dpr); };
@@ -441,8 +665,13 @@ async function start(){
   setTimeout(()=>{ if(!ori) showErr("Aucun capteur d'orientation détecté. Ouvrez la page sur un smartphone."); },2500);
 }
 $("#startBtn").addEventListener("click",start);
-$("#pauseBtn").addEventListener("click",()=>{ running=!running; $("#pauseBtn").textContent=running?"Pause":"Reprendre"; octx.clearRect(0,0,overlay.width,overlay.height); });
-document.addEventListener("visibilitychange",async()=>{ if(document.visibilityState==="visible"&&running&&navigator.wakeLock){ try{wake=await navigator.wakeLock.request("screen")}catch(e){} } });
+$("#pauseBtn").addEventListener("click",()=>{ running=!running; $("#pauseBtn").textContent=running?"Pause":"Reprendre"; octx.clearRect(0,0,overlay.width,overlay.height); $("#cam").classList.remove("alert"); });
+document.addEventListener("visibilitychange",async()=>{
+  if(document.visibilityState==="hidden"){ saveCurrent(); return; }
+  if(running){ try{ if(navigator.wakeLock) wake=await navigator.wakeLock.request("screen"); }catch(e){} if(actx&&actx.state!=="running") try{actx.resume()}catch(e){} }
+});
+window.addEventListener("pagehide",saveCurrent);
+$("#shotBtn").addEventListener("click",()=>{ if(actx&&actx.state!=="running") try{actx.resume()}catch(e){} takePhoto(); });
 
 function bindHold(id,mode){
   const b=$(id);
@@ -453,7 +682,12 @@ function bindHold(id,mode){
 }
 bindHold("#markObs","obs"); bindHold("#markSky","sky");
 
-$("#resetBtn").addEventListener("click",()=>{ skyV.fill(0); obsV.fill(0); forced.fill(0); updateStats(); drawMap(); });
+armButton($("#resetBtn"),"Confirmer l'effacement",()=>{
+  const old=tags; tags=[];
+  for(const t of old) if(!photoUsed(t.id,-1)) photoDel(t.id);
+  skyV.fill(0); obsV.fill(0); forced.fill(0); dirty=true; saveCurrent();
+  showInfo(""); renderTags(); updateStats(); drawMap();
+});
 $("#northBtn").addEventListener("click",()=>{
   if(!cur){ showErr("Démarrez le scan avant de caler le nord."); return; }
   yawOffset+=cur.az; northMode="manuel"; updateNorth();
@@ -462,14 +696,38 @@ $("#northBtn").addEventListener("click",()=>{
 /* ---------- réglages ---------- */
 function readSettings(){
   S.fov=+$("#model").value; S.tilt=Math.max(0,Math.min(45,+$("#tilt").value||0)); S.tiltAz=((+$("#tiltAz").value||0)%360+360)%360;
-  S.camFov=+$("#camFov").value; S.sens=+$("#sens").value;
+  S.camFov=+$("#camFov").value; S.sens=+$("#sens").value; S.alert=$("#alertOn").checked;
   $("#camFovVal").textContent=S.camFov; $("#sensVal").textContent=S.sens;
-  computeFov(); updateStats(); drawMap();
+  computeFov(); updateStats(); drawMap(); renderTags(); dirty=true;
 }
-for(const id of ["#model","#tilt","#tiltAz","#camFov","#sens"]) $(id).addEventListener("input",readSettings);
+function applySettings(s){
+  if(!s) return;
+  if(s.fov) $("#model").value=String(s.fov);
+  if(s.tilt!=null) $("#tilt").value=s.tilt;
+  if(s.tiltAz!=null) $("#tiltAz").value=s.tiltAz;
+  if(s.camFov) $("#camFov").value=s.camFov;
+  if(s.sens!=null) $("#sens").value=s.sens;
+  if(s.alert!=null) $("#alertOn").checked=!!s.alert;
+}
+for(const id of ["#model","#tilt","#tiltAz","#camFov","#sens","#alertOn"]) $(id).addEventListener("input",readSettings);
+
+/* ---------- sauvegarde du scan en cours ---------- */
+function saveCurrent(){
+  if(!dirty) return; dirty=false;
+  try{ localStorage.setItem(CUR,JSON.stringify({grid:encodeGrid(),tags,settings:{...S},t:Date.now()})); }catch(e){}
+}
+function restoreCurrent(){
+  let d=null; try{ d=JSON.parse(localStorage.getItem(CUR)||"null"); }catch(e){}
+  if(!d) return;
+  applySettings(d.settings);
+  decodeGrid(d.grid); tags=Array.isArray(d.tags)?d.tags:[];
+  const any=tags.length || (d.grid && /[12OS]/.test(d.grid));
+  if(any) showInfo("Scan précédent restauré ("+new Date(d.t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"})+"). « Effacer le scan » pour repartir de zéro.");
+}
+setInterval(saveCurrent,4000);
 
 /* ---------- emplacements ---------- */
-function loadPos(){ try{ return JSON.parse(localStorage.getItem(STORE)||"[]"); }catch(e){ return []; } }
+function loadPos(){ try{ const l=JSON.parse(localStorage.getItem(STORE)||"[]"); return Array.isArray(l)?l:[]; }catch(e){ return []; } }
 function savePos(list){ try{ localStorage.setItem(STORE,JSON.stringify(list)); return true; }catch(e){ return false; } }
 function renderPos(){
   const list=loadPos(), tb=$("#posList"); tb.textContent="";
@@ -477,31 +735,54 @@ function renderPos(){
   list.forEach((p,i)=>{
     const tr=document.createElement("tr");
     const t1=document.createElement("td"); if(p.img){ const im=document.createElement("img"); im.src=p.img; im.alt=""; t1.appendChild(im);}
-    const t2=document.createElement("td"); t2.textContent=p.name; const sm=document.createElement("div"); sm.className="hint"; sm.textContent=p.date+" · "+p.fov+"°"+(p.tilt?" · incl. "+p.tilt+"°":""); t2.appendChild(sm);
-    const t3=document.createElement("td"); t3.className="num"; t3.textContent=p.pct==null?"—":(p.pct*100).toFixed(p.pct<0.1?1:0)+" %";
+    const t2=document.createElement("td"); t2.textContent=p.name; const sm=document.createElement("div"); sm.className="hint";
+    const nt=(p.tags||[]).length;
+    sm.textContent=p.date+" · "+p.fov+"°"+(p.tilt?" · incl. "+p.tilt+"°":"")+(nt?" · "+nt+" repère"+(nt>1?"s":""):""); t2.appendChild(sm);
+    const t3=document.createElement("td"); t3.className="num"; t3.textContent=fmtPct(p.pct);
     const t4=document.createElement("td"); t4.className="num"; t4.textContent=Math.round(p.cov*100)+" %";
-    const t5=document.createElement("td"); const del=document.createElement("button"); del.className="linkbtn"; del.type="button"; del.textContent="Supprimer";
-    del.addEventListener("click",()=>{ const l=loadPos(); l.splice(i,1); savePos(l); renderPos(); });
-    t5.appendChild(del);
+    const t5=document.createElement("td"); const box=document.createElement("div"); box.className="actions";
+    if(p.grid){ const op=document.createElement("button"); op.className="linkbtn"; op.type="button"; op.textContent="Ouvrir";
+      armButton(op,"Remplacer le scan ?",()=>openPos(i)); box.appendChild(op); }
+    const del=document.createElement("button"); del.className="linkbtn del"; del.type="button"; del.textContent="Supprimer";
+    armButton(del,"Confirmer ?",()=>{ const l=loadPos(); const gone=l.splice(i,1)[0]; savePos(l);
+      for(const t of (gone&&gone.tags)||[]) if(!tags.some(x=>x.id===t.id) && !l.some(q=>(q.tags||[]).some(x=>x.id===t.id))) photoDel(t.id);
+      renderPos(); });
+    box.appendChild(del); t5.appendChild(box);
     tr.append(t1,t2,t3,t4,t5); tb.appendChild(tr);
   });
 }
+function openPos(i){
+  const p=loadPos()[i]; if(!p||!p.grid) return;
+  const saved=loadPos();
+  for(const t of tags) if(!saved.some(q=>(q.tags||[]).some(x=>x.id===t.id))) photoDel(t.id);
+  applySettings({fov:p.fov,tilt:p.tilt,tiltAz:p.tiltAz});
+  decodeGrid(p.grid); tags=(p.tags||[]).map(t=>({...t}));
+  readSettings(); dirty=true; saveCurrent();
+  $("#posName").value=p.name;
+  showInfo("Emplacement « "+p.name+" » ouvert. Vous pouvez compléter le scan et l'enregistrer à nouveau.");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
 $("#saveBtn").addEventListener("click",()=>{
-  if(!lastStats.cov){ showErr("Rien à enregistrer : scannez d'abord le ciel."); return; }
+  if(!lastStats.cov && !tags.length){ showErr("Rien à enregistrer : scannez d'abord le ciel."); return; }
+  drawMap();
   const th=document.createElement("canvas"); th.width=th.height=120; th.getContext("2d").drawImage(map,0,0,120,120);
   const d=new Date();
-  const p={name:($("#posName").value.trim()||"Emplacement "+(loadPos().length+1)), date:d.toLocaleDateString("fr-FR")+" "+d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}),
-    pct:lastStats.pct, cov:lastStats.cov, fov:S.fov, tilt:S.tilt, img:th.toDataURL("image/png")};
+  const p={name:($("#posName").value.trim()||"Emplacement "+(loadPos().length+1)),
+    date:d.toLocaleDateString("fr-FR")+" "+d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}),
+    pct:lastStats.pct, cov:lastStats.cov, fov:S.fov, tilt:S.tilt, tiltAz:S.tiltAz,
+    img:th.toDataURL("image/png"), grid:encodeGrid(), tags:tags.map(t=>({...t}))};
   const l=loadPos(); l.unshift(p);
-  if(!savePos(l)) showErr("Enregistrement impossible sur ce navigateur (stockage désactivé).");
+  if(!savePos(l)){ showErr("Enregistrement impossible : stockage du navigateur plein ou désactivé. Supprimez d'anciens emplacements."); return; }
+  $("#error").hidden=true;
   $("#posName").value=""; renderPos();
+  showInfo("Emplacement « "+p.name+" » enregistré"+(tags.length?" avec "+tags.length+" repère"+(tags.length>1?"s":""):"")+".");
 });
 
 /* ---------- init ---------- */
 readColors();
 if(window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{ readColors(); drawMap(); });
-readSettings(); renderPos(); updateNorth();
-window.__visee={rotMatrix,azEl,cellIdx,inCone,fovAxis,S}; // tests
+restoreCurrent();
+readSettings(); dirty=false; renderPos(); renderTags(); updateNorth();
 })();
 </script>
 </body>
